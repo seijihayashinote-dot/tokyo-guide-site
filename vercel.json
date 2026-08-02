@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/tokyo-guide-site_21.html" }
+  ]
+}
