@@ -952,6 +952,80 @@
     color: var(--ink-soft);
   }
   .price-note strong { color: var(--ink); }
+  .price-card--featured { position: relative; }
+  .price-badge {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--seal);
+    color: #FFF8EE;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 999px;
+    box-shadow: 0 4px 10px rgba(200,90,31,0.3);
+    white-space: nowrap;
+  }
+  .price-fallback {
+    max-width: 640px;
+    margin: 28px auto 0;
+    text-align: center;
+  }
+  .price-fallback summary {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    color: var(--seal);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    list-style: none;
+    outline: none;
+    padding: 2px;
+  }
+  .price-fallback summary::-webkit-details-marker { display: none; }
+  .price-fallback summary::marker { content: ''; }
+  .price-fallback summary:focus-visible {
+    outline: 2px solid var(--seal);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+  .price-fallback summary .chevron {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    transition: transform 0.2s ease;
+  }
+  .price-fallback[open] summary .chevron { transform: rotate(180deg); }
+  .price-included {
+    margin-top: 20px;
+    text-align: left;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 24px 28px;
+  }
+  .price-included p {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .price-included ul {
+    margin: 0 0 12px;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .price-included li {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
 
   /* ---------- Calendar ---------- */
   .cal-card {
@@ -1013,6 +1087,7 @@
   .cal-day.open:hover { background: rgba(184,146,61,0.28); }
   .cal-day.closed { color: var(--line); text-decoration: line-through; }
   .cal-day.selected { background: var(--seal); color: var(--paper); }
+  .cal-day.past { opacity: 0.35; pointer-events: none; }
   .cal-legend {
     display: flex;
     gap: 20px;
@@ -1065,6 +1140,16 @@
     color: var(--stone);
     font-family: var(--sans);
   }
+  .cal-day-times {
+    margin-top: 18px;
+    padding: 12px 16px;
+    background: rgba(184,146,61,0.1);
+    border-radius: 6px;
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    color: var(--ink);
+  }
+  .cal-day.loading-day { color: var(--line); }
   .booking-steps {
     max-width: 640px;
     margin: 28px auto 0;
@@ -1457,6 +1542,7 @@
         <div class="price-detail">5 hours · up to 4 people</div>
       </div>
       <div class="price-card price-card--featured">
+        <div class="price-badge">Most Popular</div>
         <div class="price-name">Full Day</div>
         <div class="price-amount">$300</div>
         <div class="price-detail">8 hours · up to 4 people</div>
@@ -1465,7 +1551,23 @@
     <div class="price-note">
       <p><strong>5–8 people:</strong> +$30 per additional guest beyond 4.</p>
       <p><strong>9+ people:</strong> Message me for a custom quote.</p>
+      <p><strong>Note:</strong> This is the guide fee only. Transportation, food, drinks, and entry fees are separate and paid as you go.</p>
     </div>
+
+    <details class="price-fallback">
+      <summary>What's included <span class="chevron">▾</span></summary>
+      <div class="price-included">
+        <p>Every tour is fully custom — the route is built around what you're into. As a starting point, this typically includes:</p>
+        <ul>
+          <li>Getting around the city together (trains, walking routes, timing)</li>
+          <li>Food &amp; café picks based on your taste, not tourist traps</li>
+          <li>Neighborhoods and spots picked for your interests — history, art, anime, nightlife, whatever you're into</li>
+          <li>Help with ordering, reading menus, and quick translation</li>
+          <li>Photos of you around the city along the way</li>
+        </ul>
+        <p>Tell me what you're into during the quick chat and I'll build the day around it.</p>
+      </div>
+    </details>
   </div>
 </section>
 <!-- AVAILABILITY -->
@@ -1476,19 +1578,22 @@
       <h2>Pick a date to begin.</h2>
       <p>Live availability, synced from my calendar. Only open/booked status is shown — no personal details.</p>
     </div>
-    <div class="cal-card cal-card--embed">
-      <div class="cal-scroll">
-        <iframe
-          src="https://calendar.google.com/calendar/embed?src=05982e93d2dca501026f9ed3305011ee18d86f7c7d82e74cfff73dddff9c7864%40group.calendar.google.com&ctz=Asia%2FTokyo&showTitle=0&showPrint=0&showTabs=0&showCalendars=0&showTz=0&mode=WEEK&bgcolor=%23FFF8EE&color=%23E8722C"
-          style="border: 0; height: 480px; border-radius: 6px;"
-          frameborder="0"
-          scrolling="no"
-          loading="lazy">
-        </iframe>
+    <div class="cal-card cal-card--month" id="availCal" style="margin:0 auto;">
+      <div class="cal-head">
+        <button type="button" class="cal-nav" id="calPrev" aria-label="Previous month">←</button>
+        <div class="cal-month" id="calMonthLabel">—</div>
+        <button type="button" class="cal-nav" id="calNext" aria-label="Next month">→</button>
       </div>
-      <p class="cal-swipe-hint">← swipe to see the full week →</p>
+      <div class="cal-weekdays">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend">
+        <span><span class="dot open"></span>Guide available</span>
+      </div>
+      <p class="cal-day-times" id="calDayTimes" hidden></p>
       <a class="cal-fallback-link" href="https://calendar.google.com/calendar/embed?src=05982e93d2dca501026f9ed3305011ee18d86f7c7d82e74cfff73dddff9c7864%40group.calendar.google.com&ctz=Asia%2FTokyo" target="_blank" rel="noopener">Open full calendar in a new tab →</a>
-      <p class="cal-note">This calendar shows open and booked times only — no personal details. It's for checking availability, not for booking directly.</p>
+      <p class="cal-note">Tap a highlighted date to see open times. Shows open/booked status only — no personal details.</p>
     </div>
 
     <div class="booking-steps">
@@ -1559,17 +1664,14 @@
       <div class="t-card">
         <div class="t-stars">★★★★★</div>
         <p class="body">"Seiji's energy made the whole day — he was genuinely excited to show us around, and it was contagious. Felt like exploring with an old friend, not a guide."</p>
-        <div class="t-name">— Initials · Country, City · Month Year</div>
       </div>
       <div class="t-card">
         <div class="t-stars">★★★★★</div>
         <p class="body">"Warm, funny, and clearly loves this city. He picked up on what we were into within minutes and the whole route shifted around it."</p>
-        <div class="t-name">— Initials · Country, City · Month Year</div>
       </div>
       <div class="t-card">
         <div class="t-stars">★★★★★</div>
         <p class="body">"His energy never dipped, even after hours of walking. Genuinely one of the most enthusiastic, easy-to-talk-to people we met in Japan."</p>
-        <div class="t-name">— Initials · Country, City · Month Year</div>
       </div>
     </div>
 
@@ -1930,6 +2032,147 @@
     submitBtn.textContent = originalText;
     submitBtn.disabled = false;
   });
+</script>
+
+<script>
+  // ---------- Custom monthly availability calendar ----------
+  // Fetches events from a public Google Calendar and highlights the
+  // days that have an event (= a slot Seiji has marked as available).
+  (function () {
+    var CALENDAR_ID = '05982e93d2dca501026f9ed3305011ee18d86f7c7d82e74cfff73dddff9c7864@group.calendar.google.com';
+    var API_KEY = 'AIzaSyDem8_erUF7N4eJf1S9uUCkyeryIxSEQ5Y';
+    var TZ = 'Asia/Tokyo';
+
+    var grid = document.getElementById('calGrid');
+    var monthLabel = document.getElementById('calMonthLabel');
+    var dayTimes = document.getElementById('calDayTimes');
+    var prevBtn = document.getElementById('calPrev');
+    var nextBtn = document.getElementById('calNext');
+    if (!grid || !monthLabel) return;
+
+    var today = new Date();
+    var view = { year: today.getFullYear(), month: today.getMonth() }; // month is 0-indexed
+    var todayKey = ymd(today);
+    var cache = {}; // "YYYY-M" -> { "YYYY-MM-DD": [{start,end}] }
+
+    function ymd(d) {
+      // YYYY-MM-DD in the guide's timezone
+      return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+    }
+
+    function fmtTime(d) {
+      return new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' }).format(d);
+    }
+
+    function monthKey(year, month) { return year + '-' + month; }
+
+    async function fetchMonthEvents(year, month) {
+      var key = monthKey(year, month);
+      if (cache[key]) return cache[key];
+
+      // Pad a day on each side so timezone boundaries don't drop events.
+      var timeMin = new Date(Date.UTC(year, month, 1, -12, 0, 0)).toISOString();
+      var timeMax = new Date(Date.UTC(year, month + 1, 1, 12, 0, 0)).toISOString();
+
+      var url = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(CALENDAR_ID) +
+        '/events?key=' + encodeURIComponent(API_KEY) +
+        '&timeMin=' + encodeURIComponent(timeMin) +
+        '&timeMax=' + encodeURIComponent(timeMax) +
+        '&singleEvents=true&orderBy=startTime&maxResults=250';
+
+      var byDate = {};
+      try {
+        var res = await fetch(url);
+        if (!res.ok) throw new Error('calendar fetch failed: ' + res.status);
+        var data = await res.json();
+        (data.items || []).forEach(function (ev) {
+          if (ev.start && ev.start.dateTime) {
+            var start = new Date(ev.start.dateTime);
+            var end = ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : start;
+            var dateKey = ymd(start);
+            if (dateKey.slice(0, 7) === (year + '-' + String(month + 1).padStart(2, '0'))) {
+              (byDate[dateKey] = byDate[dateKey] || []).push({ start: start, end: end, allDay: false });
+            }
+          } else if (ev.start && ev.start.date) {
+            // All-day event — may span multiple days (end.date is exclusive).
+            var cur = new Date(ev.start.date + 'T00:00:00');
+            var endD = new Date((ev.end && ev.end.date ? ev.end.date : ev.start.date) + 'T00:00:00');
+            while (cur < endD) {
+              var dk = ymd(cur);
+              if (dk.slice(0, 7) === (year + '-' + String(month + 1).padStart(2, '0'))) {
+                (byDate[dk] = byDate[dk] || []).push({ allDay: true });
+              }
+              cur.setDate(cur.getDate() + 1);
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Could not load calendar availability:', err);
+      }
+      cache[key] = byDate;
+      return byDate;
+    }
+
+    async function render() {
+      dayTimes.hidden = true;
+      grid.innerHTML = '<p class="cal-loading" style="grid-column:1/-1; text-align:center; font-family:var(--sans); font-size:0.85rem; color:var(--stone);">Loading availability…</p>';
+      monthLabel.textContent = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: TZ }).format(new Date(view.year, view.month, 1));
+
+      var byDate = await fetchMonthEvents(view.year, view.month);
+
+      var firstWeekday = new Date(view.year, view.month, 1).getDay(); // 0 = Sun
+      var daysInMonth = new Date(view.year, view.month + 1, 0).getDate();
+
+      var cells = [];
+      for (var i = 0; i < firstWeekday; i++) cells.push(null);
+      for (var d = 1; d <= daysInMonth; d++) cells.push(d);
+      while (cells.length % 7 !== 0) cells.push(null);
+
+      grid.innerHTML = '';
+      cells.forEach(function (dayNum) {
+        var cell = document.createElement('div');
+        if (dayNum === null) {
+          cell.className = 'cal-day empty';
+          grid.appendChild(cell);
+          return;
+        }
+        var dateObj = new Date(view.year, view.month, dayNum);
+        var key = ymd(dateObj);
+        var events = byDate[key];
+        cell.className = 'cal-day';
+        cell.textContent = String(dayNum);
+        if (key === todayKey) cell.classList.add('selected');
+        if (key < todayKey) cell.classList.add('past');
+        if (events && events.length) {
+          cell.classList.add('open');
+          cell.addEventListener('click', function () {
+            grid.querySelectorAll('.cal-day.active-day').forEach(function (c) { c.classList.remove('active-day'); });
+            cell.classList.add('active-day');
+            var label = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: TZ }).format(dateObj);
+            var times = events.map(function (ev) {
+              return ev.allDay ? 'Available all day' : fmtTime(ev.start) + '–' + fmtTime(ev.end);
+            }).join(', ');
+            dayTimes.textContent = label + ': ' + times;
+            dayTimes.hidden = false;
+          });
+        }
+        grid.appendChild(cell);
+      });
+    }
+
+    prevBtn.addEventListener('click', function () {
+      view.month -= 1;
+      if (view.month < 0) { view.month = 11; view.year -= 1; }
+      render();
+    });
+    nextBtn.addEventListener('click', function () {
+      view.month += 1;
+      if (view.month > 11) { view.month = 0; view.year += 1; }
+      render();
+    });
+
+    render();
+  })();
 </script>
 
 </body>
