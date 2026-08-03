@@ -27,6 +27,35 @@ function clean(str, max) {
   return String(str || '').trim().slice(0, max);
 }
 
+// Minimal NG-word / spam filter. Blocks obvious spam content (links, common
+// spam-ad keywords, HTML injection attempts). Not exhaustive — just a
+// first line of defense against bots and low-effort spam.
+const NG_WORDS = [
+  'http://', 'https://', 'www.', '<script', '[url=', '.ru/', 'bit.ly',
+  'viagra', 'cialis', 'casino', 'crypto', 'bitcoin', 'forex', 'loan',
+  'porn', 'xxx', 'nude', 'sex ', 'escort',
+];
+
+function containsNgWord(text) {
+  const lower = text.toLowerCase();
+  return NG_WORDS.some((w) => lower.includes(w));
+}
+
+function getClientIp(req) {
+  const fwd = req.headers['x-forwarded-for'];
+  if (fwd) return String(fwd).split(',')[0].trim();
+  return req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : 'unknown';
+}
+
+// Simple hash so we don't store raw IPs in KV.
+function hashIp(ip) {
+  let h = 0;
+  for (let i = 0; i < ip.length; i++) {
+    h = (h * 31 + ip.charCodeAt(i)) | 0;
+  }
+  return 'ip' + Math.abs(h).toString(36);
+}
+
 module.exports = async function handler(req, res) {
   try {
     if (req.method === 'GET') {
@@ -59,6 +88,29 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'Missing a required field.' });
       }
 
+      if (containsNgWord(`${name} ${country} ${text}`)) {
+        return res.status(400).json({ error: 'Your review could not be posted. Please remove links or inappropriate content.' });
+      }
+
+      // Rate-limit: same visitor (by IP) can only post once every 3 minutes,
+      // and at most 5 reviews per rolling 24h window.
+      const ipKey = hashIp(getClientIp(req));
+      const cooldownKey = `review_cd:${ipKey}`;
+      const dayKey = `review_day:${ipKey}`;
+
+      const cooldown = await kv(['GET', cooldownKey]);
+      if (cooldown.result) {
+        return res.status(429).json({ error: 'Please wait a few minutes before submitting another review.' });
+      }
+
+      const dayCount = await kv(['INCR', dayKey]);
+      if (dayCount.result === 1) {
+        await kv(['EXPIRE', dayKey, '86400']);
+      }
+      if (dayCount.result > 5) {
+        return res.status(429).json({ error: 'You have reached the daily review limit.' });
+      }
+
       const review = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
         name,
@@ -72,6 +124,7 @@ module.exports = async function handler(req, res) {
 
       await kv(['LPUSH', 'reviews', JSON.stringify(review)]);
       await kv(['LTRIM', 'reviews', '0', '499']); // keep the list bounded
+      await kv(['SET', cooldownKey, '1', 'EX', '180']); // 3 min cooldown
 
       return res.status(200).json({ ok: true, review });
     }
