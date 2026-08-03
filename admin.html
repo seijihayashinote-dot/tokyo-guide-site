@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Reviews Admin</title>
+<style>
+  :root {
+    --ink: #2b2622;
+    --paper: #FFFDF8;
+    --paper-deep: #F7F1E6;
+    --seal: #B33A2E;
+    --line: #E4DCCB;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--paper-deep);
+    color: var(--ink);
+    padding: 32px 20px 80px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin-bottom: 4px; }
+  .sub { color: #6b6459; font-size: 0.9rem; margin-bottom: 28px; }
+
+  .gate {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 28px;
+    max-width: 420px;
+    margin: 60px auto;
+    text-align: center;
+  }
+  .gate input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 1rem;
+    margin: 16px 0;
+  }
+  .gate button, .toolbar button {
+    background: var(--seal);
+    color: #fff;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .gate button:hover, .toolbar button:hover { opacity: 0.9; }
+  .error { color: var(--seal); font-size: 0.85rem; margin-top: 8px; min-height: 1em; }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .toolbar .count { font-size: 0.9rem; color: #6b6459; }
+
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .who { font-weight: 700; }
+  .meta { font-size: 0.82rem; color: #857c6d; margin-top: 2px; }
+  .stars { color: var(--seal); letter-spacing: 1px; white-space: nowrap; }
+  .text { font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap; }
+  .del-btn {
+    background: none;
+    border: 1px solid var(--seal);
+    color: var(--seal);
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .del-btn:hover { background: var(--seal); color: #fff; }
+  .del-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .empty { text-align: center; color: #857c6d; padding: 60px 0; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="gate" class="gate">
+      <h1>Reviews Admin</h1>
+      <p class="sub">Enter the admin token to manage reviews.</p>
+      <input type="password" id="tokenInput" placeholder="Admin token" autocomplete="off">
+      <div>
+        <button id="unlockBtn">Unlock</button>
+      </div>
+      <div class="error" id="gateError"></div>
+    </div>
+
+    <div id="panel" style="display:none;">
+      <h1>Reviews Admin</h1>
+      <p class="sub">Delete a review permanently removes it for all visitors.</p>
+      <div class="toolbar">
+        <span class="count" id="countLabel"></span>
+        <button id="refreshBtn">Refresh</button>
+      </div>
+      <div id="list"></div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var gate = document.getElementById('gate');
+  var panel = document.getElementById('panel');
+  var tokenInput = document.getElementById('tokenInput');
+  var unlockBtn = document.getElementById('unlockBtn');
+  var gateError = document.getElementById('gateError');
+  var list = document.getElementById('list');
+  var countLabel = document.getElementById('countLabel');
+  var refreshBtn = document.getElementById('refreshBtn');
+  var adminToken = '';
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function starsHtml(rating) {
+    var r = Math.max(0, Math.min(5, parseInt(rating, 10) || 0));
+    return '★★★★★'.slice(0, r) + '☆☆☆☆☆'.slice(0, 5 - r);
+  }
+
+  function renderReviews(reviews) {
+    if (!reviews.length) {
+      list.innerHTML = '<div class="empty">No reviews yet.</div>';
+      countLabel.textContent = '';
+      return;
+    }
+    countLabel.textContent = reviews.length + ' review' + (reviews.length === 1 ? '' : 's');
+    list.innerHTML = reviews.map(function (r) {
+      var date = r.date ? new Date(r.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+      return '' +
+        '<div class="card" data-id="' + escapeHtml(r.id) + '">' +
+          '<div class="card-top">' +
+            '<div>' +
+              '<div class="who">' + escapeHtml(r.name) + '</div>' +
+              '<div class="meta">' + escapeHtml(r.country) + ' · ' + escapeHtml(r.ageGroup) + ' · group of ' + escapeHtml(r.groupSize) + ' · ' + date + '</div>' +
+            '</div>' +
+            '<div style="text-align:right;">' +
+              '<div class="stars">' + starsHtml(r.rating) + '</div>' +
+              '<button class="del-btn" data-id="' + escapeHtml(r.id) + '">Delete</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="text">' + escapeHtml(r.text) + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function loadReviews() {
+    list.innerHTML = '<div class="empty">Loading…</div>';
+    fetch('/api/reviews')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        var reviews = (data.reviews || []).slice().sort(function (a, b) {
+          return new Date(b.date) - new Date(a.date);
+        });
+        renderReviews(reviews);
+      })
+      .catch(function () {
+        list.innerHTML = '<div class="empty">Failed to load reviews.</div>';
+      });
+  }
+
+  function unlock() {
+    var t = tokenInput.value.trim();
+    if (!t) return;
+    adminToken = t;
+    // Verify by attempting a harmless DELETE with a bogus id; 401 = wrong token, otherwise ok.
+    fetch('/api/reviews?id=__check__', {
+      method: 'DELETE',
+      headers: { 'X-Admin-Token': adminToken },
+    }).then(function (res) {
+      if (res.status === 401) {
+        gateError.textContent = 'Incorrect token.';
+        return;
+      }
+      gate.style.display = 'none';
+      panel.style.display = 'block';
+      loadReviews();
+    }).catch(function () {
+      gateError.textContent = 'Could not reach the server.';
+    });
+  }
+
+  unlockBtn.addEventListener('click', unlock);
+  tokenInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') unlock();
+  });
+  refreshBtn.addEventListener('click', loadReviews);
+
+  list.addEventListener('click', function (e) {
+    var btn = e.target.closest('.del-btn');
+    if (!btn) return;
+    var id = btn.getAttribute('data-id');
+    if (!confirm('Delete this review? This cannot be undone.')) return;
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+    fetch('/api/reviews?id=' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: { 'X-Admin-Token': adminToken },
+    })
+      .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+      .then(function (result) {
+        if (!result.ok) {
+          alert(result.data.error || 'Failed to delete.');
+          btn.disabled = false;
+          btn.textContent = 'Delete';
+          return;
+        }
+        var card = btn.closest('.card');
+        if (card) card.remove();
+      })
+      .catch(function () {
+        alert('Failed to delete.');
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+      });
+  });
+})();
+</script>
+</body>
+</html>
