@@ -255,8 +255,7 @@
     min-height: 62vh;
     display: flex;
     align-items: center;
-    position: sticky;
-    top: 0;
+    position: relative;
     z-index: 1;
     padding-top: 110px;
     padding-bottom: 60px;
@@ -2305,45 +2304,31 @@
     }
   })();
 
-  // Hero clears away (fades) as the user scrolls past it, revealing the
-  // next section which was already sitting underneath. Since the hero is
-  // position:sticky, its getBoundingClientRect() stays pinned at top:0 the
-  // whole time it's held in place, so we track raw scroll distance against
-  // its own static (in-flow) position instead of the live rect.
+  // Hero dissolves as it scrolls up and off-screen, so the handoff to the
+  // next section feels like a soft fade instead of a hard crop. The hero is
+  // normal (non-sticky) flow, so it scrolls away at the same natural rate
+  // as the next section arrives from below — no artificial gap or overlap.
   (function () {
     var hero = document.querySelector('.hero');
     if (!hero || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    var staticTop = 0;
-    var heroHeight = 1;
-    function measure() {
-      var prevPosition = hero.style.position;
-      hero.style.position = 'static';
-      staticTop = hero.getBoundingClientRect().top + window.scrollY;
-      hero.style.position = prevPosition;
-      heroHeight = hero.offsetHeight || 1;
-    }
-    var ticking = false;
-    function update() {
-      ticking = false;
-      // Fade across the hero's full scroll-through distance so it finishes
-      // exactly as the next section arrives underneath it (no empty gap).
-      var progress = Math.min(1, Math.max(0, (window.scrollY - staticTop) / heroHeight));
-      hero.style.opacity = String(1 - progress);
-      hero.style.transform = 'scale(' + (1 - progress * 0.06) + ')';
-      hero.style.pointerEvents = progress > 0.6 ? 'none' : '';
-    }
-    window.addEventListener('scroll', function () {
-      if (!ticking) {
-        ticking = true;
-        requestAnimationFrame(update);
+    var lastProgress = -1;
+    function loop() {
+      var rect = hero.getBoundingClientRect();
+      var fadeDistance = (rect.height || 1) * 0.55;
+      var progress = Math.min(1, Math.max(0, -rect.top / fadeDistance));
+      if (progress !== lastProgress) {
+        hero.style.opacity = String(1 - progress);
+        hero.style.transform = 'scale(' + (1 - progress * 0.05) + ')';
+        lastProgress = progress;
       }
-    }, { passive: true });
-    window.addEventListener('resize', function () {
-      measure();
-      update();
-    });
-    measure();
-    update();
+      requestAnimationFrame(loop);
+    }
+    // Polling via requestAnimationFrame instead of a scroll listener: some
+    // layouts (e.g. overflow-x:hidden on body) can make the body element the
+    // actual scroll container instead of window, which means window's
+    // "scroll" event never fires. Reading the live rect every frame works
+    // regardless of which element owns the scroll.
+    requestAnimationFrame(loop);
   })();
 
   // Fade/slide elements in as they scroll into view
