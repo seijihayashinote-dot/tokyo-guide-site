@@ -56,6 +56,11 @@ function hashIp(ip) {
   return 'ip' + Math.abs(h).toString(36);
 }
 
+function isAdmin(req) {
+  const token = req.headers['x-admin-token'] || (req.query && req.query.token);
+  return Boolean(process.env.ADMIN_TOKEN) && token === process.env.ADMIN_TOKEN;
+}
+
 module.exports = async function handler(req, res) {
   try {
     if (req.method === 'GET') {
@@ -129,7 +134,42 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true, review });
     }
 
-    res.setHeader('Allow', 'GET, POST');
+    if (req.method === 'DELETE') {
+      if (!isAdmin(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+      const id = (req.query && req.query.id) || body.id;
+      if (!id) {
+        return res.status(400).json({ error: 'Missing review id.' });
+      }
+
+      const result = await kv(['LRANGE', 'reviews', '0', '499']);
+      const raw = result.result || [];
+      const parsed = raw
+        .map((s) => {
+          try {
+            return { raw: s, review: JSON.parse(s) };
+          } catch (e) {
+            return null;
+          }
+        })
+        .filter(Boolean);
+
+      const remaining = parsed.filter((item) => item.review.id !== id);
+      if (remaining.length === parsed.length) {
+        return res.status(404).json({ error: 'Review not found.' });
+      }
+
+      await kv(['DEL', 'reviews']);
+      for (const item of remaining) {
+        await kv(['RPUSH', 'reviews', item.raw]);
+      }
+
+      return res.status(200).json({ ok: true, deletedId: id });
+    }
+
+    res.setHeader('Allow', 'GET, POST, DELETE');
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error(err);
