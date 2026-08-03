@@ -252,7 +252,7 @@
 
   /* ---------- Hero ---------- */
   .hero {
-    min-height: 78vh;
+    min-height: 62vh;
     display: flex;
     align-items: center;
     position: sticky;
@@ -290,6 +290,7 @@
       background-size: cover;
       background-position: center 55%;
     }
+    .hero { min-height: 52vh; }
   }
   .hero-inner {
     display: grid;
@@ -2324,10 +2325,9 @@
     var ticking = false;
     function update() {
       ticking = false;
-      // Fade out over roughly the first 45% of the hero's own height so it
-      // clears away quickly instead of lingering over the next section.
-      var fadeDistance = heroHeight * 0.45;
-      var progress = Math.min(1, Math.max(0, (window.scrollY - staticTop) / fadeDistance));
+      // Fade across the hero's full scroll-through distance so it finishes
+      // exactly as the next section arrives underneath it (no empty gap).
+      var progress = Math.min(1, Math.max(0, (window.scrollY - staticTop) / heroHeight));
       hero.style.opacity = String(1 - progress);
       hero.style.transform = 'scale(' + (1 - progress * 0.06) + ')';
       hero.style.pointerEvents = progress > 0.6 ? 'none' : '';
