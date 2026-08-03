@@ -1417,6 +1417,45 @@
     line-height: 1.5;
   }
   .cal-modal .btn-primary { display: inline-block; }
+  .cal-modal-template {
+    text-align: left;
+    margin: 0 0 20px;
+  }
+  .cal-modal-template-label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--stone);
+    margin-bottom: 8px;
+  }
+  .cal-modal-template-box {
+    background: var(--paper-deep);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .cal-modal-template-box p {
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    color: var(--ink);
+    line-height: 1.5;
+    margin: 0 0 10px;
+  }
+  .cal-modal-copy-btn {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: none;
+    border: 1px solid var(--stone);
+    color: var(--stone);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .cal-modal-copy-btn:hover { background: var(--line); }
+  .cal-modal-copy-btn.copied { background: #2E7D4F; border-color: #2E7D4F; color: #fff; }
   .cal-modal-close {
     position: absolute;
     top: 12px;
@@ -1462,6 +1501,25 @@
   .booking-step p { font-size: 0.92rem; color: var(--ink-soft); }
   .booking-step p strong { color: var(--ink); }
   .steps-cta { margin: 24px auto 0; max-width: 640px; text-align: center; }
+
+  .booking-steps--highlight {
+    margin: 0 auto 32px;
+    background: var(--paper);
+    border: 1px solid rgba(232,114,44,0.35);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 12px 28px rgba(200,90,31,0.12);
+  }
+  .booking-steps--highlight .booking-step {
+    background: none;
+    border: none;
+    padding: 10px 4px;
+  }
+  .booking-steps--highlight .booking-step-num {
+    background: var(--seal);
+    box-shadow: 0 0 0 4px rgba(232,114,44,0.15);
+  }
+  .booking-steps--highlight .booking-step p { font-size: 0.96rem; }
 
   .dm-template {
     max-width: 480px;
@@ -1837,6 +1895,26 @@
       <h2>Pick a date to begin.</h2>
       <p>Live availability, synced from my calendar. Only open/booked status is shown — no personal details.</p>
     </div>
+
+    <div class="booking-steps booking-steps--highlight">
+      <div class="booking-step">
+        <span class="booking-step-num">1</span>
+        <p><strong>Check &amp; message</strong> — pick an open day on the calendar below, then message me on Instagram or the form below with your date and what excites you.</p>
+      </div>
+      <div class="booking-step">
+        <span class="booking-step-num">2</span>
+        <p><strong>Quick chat</strong> — I'll ask a few questions (group size, pace, interests, any food restrictions) to get the details right.</p>
+      </div>
+      <div class="booking-step">
+        <span class="booking-step-num">3</span>
+        <p><strong>I design your route</strong> and send it over for you to review before anything is booked.</p>
+      </div>
+      <div class="booking-step">
+        <span class="booking-step-num">4</span>
+        <p><strong>Confirm &amp; explore</strong> — once the plan looks good, I'll send a payment link, and we'll meet up and explore Tokyo together.</p>
+      </div>
+    </div>
+
     <div class="cal-card cal-card--month" id="availCal" style="margin:0 auto;">
       <div class="cal-head">
         <button type="button" class="cal-nav" id="calPrev" aria-label="Previous month">←</button>
@@ -1857,26 +1935,14 @@
         <button type="button" class="cal-modal-close" id="calModalClose" aria-label="Close">×</button>
         <h3 id="calModalTitle"></h3>
         <p id="calModalTimes"></p>
+        <div class="cal-modal-template">
+          <span class="cal-modal-template-label">Copy this to send:</span>
+          <div class="cal-modal-template-box">
+            <p id="calModalTemplateText"></p>
+            <button type="button" class="cal-modal-copy-btn" id="calModalCopyBtn">Copy</button>
+          </div>
+        </div>
         <a class="btn-primary" href="https://instagram.com/seiji.guides.tokyo" target="_blank" rel="noopener">Message on Instagram →</a>
-      </div>
-    </div>
-
-    <div class="booking-steps">
-      <div class="booking-step">
-        <span class="booking-step-num">1</span>
-        <p><strong>Check &amp; message</strong> — pick an open day on the calendar above, then message me on Instagram or the form below with your date and what excites you.</p>
-      </div>
-      <div class="booking-step">
-        <span class="booking-step-num">2</span>
-        <p><strong>Quick chat</strong> — I'll ask a few questions (group size, pace, interests, any food restrictions) to get the details right.</p>
-      </div>
-      <div class="booking-step">
-        <span class="booking-step-num">3</span>
-        <p><strong>I design your route</strong> and send it over for you to review before anything is booked.</p>
-      </div>
-      <div class="booking-step">
-        <span class="booking-step-num">4</span>
-        <p><strong>Confirm &amp; explore</strong> — once the plan looks good, I'll send a payment link, and we'll meet up and explore Tokyo together.</p>
       </div>
     </div>
     <div class="steps-cta">
@@ -2616,13 +2682,33 @@
     var modalTitle = document.getElementById('calModalTitle');
     var modalTimes = document.getElementById('calModalTimes');
     var modalClose = document.getElementById('calModalClose');
+    var modalTemplateText = document.getElementById('calModalTemplateText');
+    var modalCopyBtn = document.getElementById('calModalCopyBtn');
     if (!grid || !monthLabel) return;
 
     function openDayModal(label, times) {
       modalTitle.textContent = label || 'This date';
       modalTimes.textContent = times || 'Available — message me for exact times.';
+      if (modalTemplateText) {
+        modalTemplateText.textContent = 'Hi Seiji! I\'d love to book a tour on ' + (label || 'this date') + '. Are you available?';
+      }
       modalOverlay.hidden = false;
       document.body.style.overflow = 'hidden';
+    }
+    if (modalCopyBtn && modalTemplateText) {
+      modalCopyBtn.addEventListener('click', async function () {
+        try {
+          await navigator.clipboard.writeText(modalTemplateText.textContent.trim());
+          modalCopyBtn.textContent = 'Copied!';
+          modalCopyBtn.classList.add('copied');
+          setTimeout(function () {
+            modalCopyBtn.textContent = 'Copy';
+            modalCopyBtn.classList.remove('copied');
+          }, 2000);
+        } catch (err) {
+          modalCopyBtn.textContent = 'Select & copy manually';
+        }
+      });
     }
     function closeDayModal() {
       modalOverlay.hidden = true;
@@ -2649,7 +2735,7 @@
     }
 
     function fmtTime(d) {
-      return new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' }).format(d);
+      return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
     }
 
     function monthKey(year, month) { return year + '-' + month; }
