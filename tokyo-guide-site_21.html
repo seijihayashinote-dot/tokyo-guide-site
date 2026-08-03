@@ -982,19 +982,21 @@
   }
   .star-input {
     display: flex;
-    gap: 4px;
-    font-size: 1.6rem;
+    gap: 6px;
+    font-size: 2.1rem;
     line-height: 1;
   }
   .star-input .star {
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--line);
+    color: var(--stone);
+    opacity: 0.55;
     padding: 2px;
-    transition: color 0.15s;
+    transition: color 0.15s, opacity 0.15s, transform 0.15s;
   }
-  .star-input .star.is-filled { color: var(--seal); }
+  .star-input .star:hover { transform: scale(1.12); }
+  .star-input .star.is-filled { color: var(--seal); opacity: 1; }
   .testimonial-cta {
     text-align: center;
     margin-top: 48px;
@@ -1348,7 +1350,7 @@
     border-radius: 50%;
     margin-right: 6px;
   }
-  .dot.open { background: var(--gold); }
+  .dot.open { background: #B8923D; }
   .dot.selected { background: var(--seal); }
   .dot.closed { background: var(--line); }
 
@@ -1378,22 +1380,55 @@
   @media (max-width: 640px) {
     .cal-swipe-hint { display: block; }
   }
-  .cal-note {
-    margin-top: 16px;
-    font-size: 0.85rem;
-    color: var(--stone);
-    font-family: var(--sans);
+  .cal-day.loading-day { color: var(--line); }
+
+  .cal-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(43,38,34,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 500;
   }
-  .cal-day-times {
-    margin-top: 18px;
-    padding: 12px 16px;
-    background: rgba(184,146,61,0.1);
-    border-radius: 6px;
-    font-family: var(--sans);
-    font-size: 0.85rem;
+  .cal-modal {
+    position: relative;
+    background: var(--paper);
+    border-radius: 12px;
+    padding: 32px 28px;
+    max-width: 360px;
+    width: 100%;
+    box-shadow: 0 24px 48px rgba(43,38,34,0.25);
+    text-align: center;
+  }
+  .cal-modal h3 {
+    font-family: var(--serif);
+    font-size: 1.3rem;
+    margin: 0 0 12px;
     color: var(--ink);
   }
-  .cal-day.loading-day { color: var(--line); }
+  .cal-modal p {
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+    margin: 0 0 24px;
+    line-height: 1.5;
+  }
+  .cal-modal .btn-primary { display: inline-block; }
+  .cal-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--stone);
+    cursor: pointer;
+    padding: 4px;
+  }
+  .cal-modal-close:hover { color: var(--ink); }
   .booking-steps {
     max-width: 640px;
     margin: 28px auto 0;
@@ -1814,9 +1849,15 @@
       <div class="cal-legend">
         <span><span class="dot open"></span>Guide available</span>
       </div>
-      <p class="cal-day-times" id="calDayTimes" hidden></p>
-      <a class="cal-fallback-link" href="https://calendar.google.com/calendar/embed?src=05982e93d2dca501026f9ed3305011ee18d86f7c7d82e74cfff73dddff9c7864%40group.calendar.google.com&ctz=Asia%2FTokyo" target="_blank" rel="noopener">Open full calendar in a new tab →</a>
-      <p class="cal-note">Tap a highlighted date to see open times. Shows open/booked status only — no personal details.</p>
+    </div>
+
+    <div class="cal-modal-overlay" id="calModalOverlay" hidden>
+      <div class="cal-modal" role="dialog" aria-modal="true" aria-labelledby="calModalTitle">
+        <button type="button" class="cal-modal-close" id="calModalClose" aria-label="Close">×</button>
+        <h3 id="calModalTitle"></h3>
+        <p id="calModalTimes"></p>
+        <a class="btn-primary" href="https://instagram.com/seiji.guides.tokyo" target="_blank" rel="noopener">Message on Instagram →</a>
+      </div>
     </div>
 
     <div class="booking-steps">
@@ -1931,7 +1972,23 @@
           </div>
           <div class="field">
             <label for="rcountry">Country</label>
-            <input type="text" id="rcountry" name="country" placeholder="Where you're from" required>
+            <select id="rcountry" name="country_select" required>
+              <option value="" disabled selected>Select one</option>
+              <option value="United States">United States</option>
+              <option value="United Kingdom">United Kingdom</option>
+              <option value="Canada">Canada</option>
+              <option value="Australia">Australia</option>
+              <option value="Germany">Germany</option>
+              <option value="France">France</option>
+              <option value="Italy">Italy</option>
+              <option value="Spain">Spain</option>
+              <option value="Netherlands">Netherlands</option>
+              <option value="Singapore">Singapore</option>
+              <option value="New Zealand">New Zealand</option>
+              <option value="Ireland">Ireland</option>
+              <option value="Other">Other (type below)</option>
+            </select>
+            <input type="text" id="rcountryOther" name="country" placeholder="Your country" style="display:none; margin-top:8px;">
           </div>
           <div class="field">
             <label for="rage">Age group</label>
@@ -2221,6 +2278,23 @@
       render();
     }).catch(function () { /* fall back to seed reviews only */ });
 
+    // Country select: reveal a free-text field when "Other" is chosen
+    var countrySelect = document.getElementById('rcountry');
+    var countryOther = document.getElementById('rcountryOther');
+    if (countrySelect && countryOther) {
+      countrySelect.addEventListener('change', function () {
+        if (countrySelect.value === 'Other') {
+          countryOther.style.display = 'block';
+          countryOther.setAttribute('required', 'required');
+          countryOther.focus();
+        } else {
+          countryOther.style.display = 'none';
+          countryOther.removeAttribute('required');
+          countryOther.value = '';
+        }
+      });
+    }
+
     // Star rating input
     var starInput = document.getElementById('starInput');
     var ratingField = document.getElementById('rrating');
@@ -2254,9 +2328,13 @@
           reviewNote.style.color = '#C0392B';
           return;
         }
+        var countrySelectVal = reviewForm.querySelector('#rcountry').value;
+        var countryVal = countrySelectVal === 'Other'
+          ? reviewForm.querySelector('#rcountryOther').value.trim()
+          : countrySelectVal;
         var payload = {
           name: reviewForm.querySelector('#rname').value,
-          country: reviewForm.querySelector('#rcountry').value,
+          country: countryVal,
           ageGroup: reviewForm.querySelector('#rage').value,
           groupSize: reviewForm.querySelector('#rgroup').value,
           rating: ratingVal,
@@ -2531,10 +2609,33 @@
 
     var grid = document.getElementById('calGrid');
     var monthLabel = document.getElementById('calMonthLabel');
-    var dayTimes = document.getElementById('calDayTimes');
     var prevBtn = document.getElementById('calPrev');
     var nextBtn = document.getElementById('calNext');
+    var modalOverlay = document.getElementById('calModalOverlay');
+    var modalTitle = document.getElementById('calModalTitle');
+    var modalTimes = document.getElementById('calModalTimes');
+    var modalClose = document.getElementById('calModalClose');
     if (!grid || !monthLabel) return;
+
+    function openDayModal(label, times) {
+      modalTitle.textContent = label || 'This date';
+      modalTimes.textContent = times || 'Available — message me for exact times.';
+      modalOverlay.hidden = false;
+      document.body.style.overflow = 'hidden';
+    }
+    function closeDayModal() {
+      modalOverlay.hidden = true;
+      document.body.style.overflow = '';
+    }
+    if (modalClose) modalClose.addEventListener('click', closeDayModal);
+    if (modalOverlay) {
+      modalOverlay.addEventListener('click', function (e) {
+        if (e.target === modalOverlay) closeDayModal();
+      });
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modalOverlay && !modalOverlay.hidden) closeDayModal();
+    });
 
     var today = new Date();
     var view = { year: today.getFullYear(), month: today.getMonth() }; // month is 0-indexed
@@ -2600,7 +2701,7 @@
     }
 
     async function render() {
-      dayTimes.hidden = true;
+      if (modalOverlay) { modalOverlay.hidden = true; document.body.style.overflow = ''; }
       grid.innerHTML = '<p class="cal-loading" style="grid-column:1/-1; text-align:center; font-family:var(--sans); font-size:0.85rem; color:var(--stone);">Loading availability…</p>';
       monthLabel.textContent = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: TZ }).format(new Date(view.year, view.month, 1));
 
@@ -2638,8 +2739,7 @@
             var times = events.map(function (ev) {
               return ev.allDay ? 'Available all day' : fmtTime(ev.start) + '–' + fmtTime(ev.end);
             }).join(', ');
-            dayTimes.textContent = label + ': ' + times;
-            dayTimes.hidden = false;
+            openDayModal(label, times);
           });
         }
         grid.appendChild(cell);
