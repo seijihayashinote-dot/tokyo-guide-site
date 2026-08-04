@@ -1353,6 +1353,25 @@
   .dot.open { background: #B8923D; }
   .dot.selected { background: var(--seal); }
   .dot.closed { background: var(--line); }
+  .cal-flex-note {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--stone);
+  }
+  .cal-required-hint {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--seal);
+    font-weight: 600;
+  }
+  .cal-card--pulse {
+    animation: calCardPulse 1s ease 2;
+  }
+  @keyframes calCardPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(179, 58, 46, 0); }
+    50% { box-shadow: 0 0 0 8px rgba(179, 58, 46, 0.18); }
+  }
 
   .cal-card--embed { max-width: 640px; padding: 24px; margin: 0 auto; }
   .cal-scroll {
@@ -1928,6 +1947,7 @@
       <div class="cal-legend">
         <span><span class="dot open"></span>Guide available</span>
       </div>
+      <p class="cal-flex-note">Times shown are the available window — you can start your tour at any time within that window, not just at the start.</p>
     </div>
 
     <div class="cal-modal-overlay" id="calModalOverlay" hidden>
@@ -1946,7 +1966,8 @@
       </div>
     </div>
     <div class="steps-cta">
-      <button type="button" class="btn-primary scroll-link" data-target="booking">Start Your Booking →</button>
+      <button type="button" class="btn-primary" id="startBookingBtn">Start Your Booking →</button>
+      <p class="cal-required-hint" id="calRequiredHint" hidden>Please select an available date on the calendar above first ↑</p>
     </div>
   </div>
 </section>
@@ -2585,6 +2606,35 @@
     });
   });
 
+  // "Start Your Booking" — require a calendar date to be picked first.
+  (function () {
+    var startBtn = document.getElementById('startBookingBtn');
+    var calCard = document.getElementById('availCal');
+    var hint = document.getElementById('calRequiredHint');
+    if (!startBtn) return;
+    startBtn.addEventListener('click', function () {
+      const navHeight = 84;
+      const hasDate = document.querySelector('.cal-day.active-day');
+      if (!hasDate) {
+        if (hint) hint.hidden = false;
+        if (calCard) {
+          const top = calCard.getBoundingClientRect().top + window.pageYOffset - navHeight;
+          window.scrollTo({ top, behavior: 'smooth' });
+          calCard.classList.remove('cal-card--pulse');
+          void calCard.offsetWidth; // restart animation
+          calCard.classList.add('cal-card--pulse');
+        }
+        return;
+      }
+      if (hint) hint.hidden = true;
+      const target = document.getElementById('booking');
+      if (target) {
+        const top = target.getBoundingClientRect().top + window.pageYOffset - navHeight;
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
+    });
+  })();
+
   // Sakura petals — real petal shapes, falling across the whole page
   (function () {
     const field = document.getElementById('sakuraField');
@@ -2822,6 +2872,8 @@
           cell.addEventListener('click', function () {
             grid.querySelectorAll('.cal-day.active-day').forEach(function (c) { c.classList.remove('active-day'); });
             cell.classList.add('active-day');
+            var calHint = document.getElementById('calRequiredHint');
+            if (calHint) calHint.hidden = true;
             var label = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: TZ }).format(dateObj);
             var times = events.map(function (ev) {
               return ev.allDay ? 'Available all day' : fmtTime(ev.start) + '–' + fmtTime(ev.end);
