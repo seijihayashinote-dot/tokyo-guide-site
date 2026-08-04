@@ -1435,6 +1435,12 @@
     margin: 0 0 24px;
     line-height: 1.5;
   }
+  .cal-modal-flex-note {
+    font-size: 0.8rem !important;
+    color: var(--stone) !important;
+    margin: -14px 0 20px !important;
+    line-height: 1.5;
+  }
   .cal-modal .btn-primary { display: inline-block; }
   .cal-modal-template {
     text-align: left;
@@ -1955,6 +1961,7 @@
         <button type="button" class="cal-modal-close" id="calModalClose" aria-label="Close">×</button>
         <h3 id="calModalTitle"></h3>
         <p id="calModalTimes"></p>
+        <p class="cal-modal-flex-note">You can start your tour at any time within this window — not only at the start.</p>
         <div class="cal-modal-template">
           <span class="cal-modal-template-label">Copy this to send:</span>
           <div class="cal-modal-template-box">
@@ -2627,11 +2634,10 @@
         return;
       }
       if (hint) hint.hidden = true;
-      const target = document.getElementById('booking');
-      if (target) {
-        const top = target.getBoundingClientRect().top + window.pageYOffset - navHeight;
-        window.scrollTo({ top, behavior: 'smooth' });
-      }
+      // A date is already selected — reopen its modal (date-specific DM
+      // template + Instagram button) instead of jumping to the generic
+      // booking section further down the page.
+      hasDate.click();
     });
   })();
 
